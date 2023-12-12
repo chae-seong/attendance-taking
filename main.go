@@ -10,10 +10,10 @@ import (
 )
 
 type user struct {
-	Username string
-	Password []byte
-	First    string
-	Last     string
+	StudentID string
+	Password  []byte
+	First     string
+	Last      string
 }
 
 var tpl *template.Template
@@ -22,7 +22,7 @@ var mapSessions = map[string]string{}
 
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
-	// default username & password
+	// admin username & password
 	bPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.MinCost) // don't do this irl
 	mapUsers["admin"] = user{"admin", bPassword, "admin", "admin"}                  // don't do this irl
 }
@@ -30,11 +30,10 @@ func init() {
 func main() {
 	http.HandleFunc("/", index)
 	http.HandleFunc("/restricted", restricted)
-	http.HandleFunc("/signup", signup)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":5332", nil)
 }
 
 func index(res http.ResponseWriter, req *http.Request) {
@@ -50,51 +49,6 @@ func restricted(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	tpl.ExecuteTemplate(res, "restricted.gohtml", myUser)
-}
-
-func signup(res http.ResponseWriter, req *http.Request) {
-	if alreadyLoggedIn(req) {
-		http.Redirect(res, req, "/", http.StatusSeeOther)
-		return
-	}
-	var myUser user
-	// process form submission
-	if req.Method == http.MethodPost {
-		// get form values
-		username := req.FormValue("username")
-		password := req.FormValue("password")
-		firstname := req.FormValue("firstname")
-		lastname := req.FormValue("lastname")
-		if username != "" {
-			// check if username exist/ taken
-			if _, ok := mapUsers[username]; ok {
-				http.Error(res, "Username already taken", http.StatusForbidden)
-				return
-			}
-			// create session
-			id := uuid.NewV4()
-			myCookie := &http.Cookie{
-				Name:  "myCookie",
-				Value: id.String(),
-			}
-			http.SetCookie(res, myCookie)
-			mapSessions[myCookie.Value] = username
-
-			bPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
-			if err != nil {
-				http.Error(res, "Internal server error", http.StatusInternalServerError)
-				return
-			}
-
-			myUser = user{username, bPassword, firstname, lastname}
-			mapUsers[username] = myUser
-		}
-		// redirect to main index
-		http.Redirect(res, req, "/", http.StatusSeeOther)
-		return
-
-	}
-	tpl.ExecuteTemplate(res, "signup.gohtml", myUser)
 }
 
 func login(res http.ResponseWriter, req *http.Request) {
