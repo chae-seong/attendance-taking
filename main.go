@@ -37,6 +37,7 @@ func init() {
 
 func main() {
 	http.HandleFunc("/", index)
+	http.HandleFunc("/admin", admin)
 	http.HandleFunc("/attendance", attendance)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
@@ -48,6 +49,16 @@ func main() {
 func index(res http.ResponseWriter, req *http.Request) {
 	myUser := getUser(res, req)
 	err := tpl.ExecuteTemplate(res, "index.gohtml", myUser)
+	fmt.Println(err)
+}
+
+func admin(res http.ResponseWriter, req *http.Request) {
+	myUser := getUser(res, req)
+	if myUser.StudentID != "admin" {
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
+	}
+	err := tpl.ExecuteTemplate(res, "admin.gohtml", myUser)
 	fmt.Println(err)
 }
 
@@ -88,7 +99,11 @@ func attendance(res http.ResponseWriter, req *http.Request) {
 
 func login(res http.ResponseWriter, req *http.Request) {
 	if alreadyLoggedIn(req) {
-		http.Redirect(res, req, "/", http.StatusSeeOther)
+		if getUser(res, req).StudentID == "admin" {
+			http.Redirect(res, req, "/admin", http.StatusSeeOther)
+		} else {
+			http.Redirect(res, req, "/", http.StatusSeeOther)
+		}
 		return
 	}
 
@@ -116,7 +131,13 @@ func login(res http.ResponseWriter, req *http.Request) {
 		}
 		http.SetCookie(res, myCookie)
 		mapSessions[myCookie.Value] = username
-		http.Redirect(res, req, "/", http.StatusSeeOther)
+
+		if myUser.StudentID == "admin" {
+			http.Redirect(res, req, "/admin", http.StatusSeeOther)
+		} else {
+			http.Redirect(res, req, "/", http.StatusSeeOther)
+		}
+
 		return
 	}
 
@@ -206,11 +227,6 @@ func submitattendance(res http.ResponseWriter, req *http.Request) {
 	}
 	myUser := getUser(res, req)
 	if req.Method == http.MethodPost {
-		if myUser.StudentID == "admin" {
-			http.Error(res, "Admin cannot submit attendance", http.StatusForbidden)
-			return
-		}
-
 		// Open csv for appending timestamp
 		file, err := os.Open("students.csv")
 		if err != nil {
