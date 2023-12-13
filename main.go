@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -24,8 +25,6 @@ var mapSessions = map[string]string{}
 
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
-	// admin username & password
-	// bPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.MinCost) // don't do this irl
 	mapUsers["admin"] = user{"admin", "admin", hashPassword("password")} // don't do this irl
 	loadStudentsFromCSV("students.csv")
 }
@@ -35,6 +34,7 @@ func main() {
 	http.HandleFunc("/restricted", restricted)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
+	http.HandleFunc("/submitattendance", submitattendance)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.ListenAndServe(":5332", nil)
 }
@@ -165,4 +165,78 @@ func hashPassword(password string) []byte {
 		log.Fatal(err)
 	}
 	return hashedPassword
+}
+
+func submitattendance(res http.ResponseWriter, req *http.Request) {
+	if !alreadyLoggedIn(req) {
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
+	}
+	myUser := getUser(res, req)
+	if req.Method == http.MethodPost {
+		if myUser.StudentID == "admin" {
+			http.Error(res, "Admin cannot submit attendance", http.StatusForbidden)
+			return
+		}
+
+		// Open csv for appending timestamp
+		file, err := os.Open("students.csv")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+
+		reader := csv.NewReader(file)
+		records, err := reader.ReadAll()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Find the index of the current student
+		var attendanceIndex int
+		for i, row := range records {
+			if row[0] == myUser.StudentID {
+				attendanceIndex = i
+				break
+			}
+		}
+
+		// Update the "Attendance" column with the current timestamp
+		if attendanceIndex > 0 {
+			records[attendanceIndex][2] = time.Now().Format("2006-01-02 15:04:05")
+		}
+
+		// Create a new file for writing
+		newFile, err := os.Create("students_attendance.csv")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer newFile.Close()
+
+		// Write the updated CSV to the new file
+		writer := csv.NewWriter(newFile)
+		defer writer.Flush()
+
+		// Write headers
+		headers := records[0]
+		err = writer.Write(headers)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Write rows
+		err = writer.WriteAll(records[1:])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Rename the new file to replace the original file
+		err = os.Rename("students_attendance.csv", "students.csv")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
+	}
 }
