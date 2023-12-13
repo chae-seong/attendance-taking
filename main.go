@@ -63,8 +63,13 @@ func admin(res http.ResponseWriter, req *http.Request) {
 }
 
 func attendance(res http.ResponseWriter, req *http.Request) {
-	// myUser := getUser(res, req)
+	myUser := getUser(res, req)
 	if !alreadyLoggedIn(req) {
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
+	}
+
+	if myUser.StudentID != "admin" {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
