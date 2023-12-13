@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Detailed Information</title>
+</head>
+<body>
+
+<h1>Student Attendance</h1>
+{{if .}}
+    <table border="1">
+        <tr>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>Attendance</th>
+        </tr>
+        {{range .}}
+        <tr>
+            <td>{{.StudentID}}</td>
+            <td>{{.Name}}</td>
+            <td>{{.Attendance}}</td>
+        </tr>
+        {{end}}
+    </table>
+    <h2><a href="/logout">Log Out</a></h2>
+{{else}}
+    <p>No student data available.</p>
+{{end}}
+
+</body>
+</html>

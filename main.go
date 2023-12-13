@@ -19,6 +19,12 @@ type user struct {
 	Password  []byte
 }
 
+type Student struct {
+	StudentID  string
+	Name       string
+	Attendance string
+}
+
 var tpl *template.Template
 var mapUsers = map[string]user{}
 var mapSessions = map[string]string{}
@@ -31,7 +37,7 @@ func init() {
 
 func main() {
 	http.HandleFunc("/", index)
-	http.HandleFunc("/restricted", restricted)
+	http.HandleFunc("/attendance", attendance)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/submitattendance", submitattendance)
@@ -45,13 +51,39 @@ func index(res http.ResponseWriter, req *http.Request) {
 	fmt.Println(err)
 }
 
-func restricted(res http.ResponseWriter, req *http.Request) {
-	myUser := getUser(res, req)
+func attendance(res http.ResponseWriter, req *http.Request) {
+	// myUser := getUser(res, req)
 	if !alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
-	tpl.ExecuteTemplate(res, "restricted.gohtml", myUser)
+
+	file, err := os.Open("students.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Convert CSV data to a slice of Student structs
+	var students []Student
+	for _, row := range records[1:] {
+		student := Student{
+			StudentID:  row[0],
+			Name:       row[1],
+			Attendance: row[2],
+		}
+		students = append(students, student)
+	}
+
+	fmt.Println(students)
+
+	tpl.ExecuteTemplate(res, "attendance.gohtml", students)
 }
 
 func login(res http.ResponseWriter, req *http.Request) {
