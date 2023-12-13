@@ -202,7 +202,10 @@ func submitattendance(res http.ResponseWriter, req *http.Request) {
 		}
 
 		// Update the "Attendance" column with the current timestamp
-		if attendanceIndex > 0 {
+		if records[attendanceIndex][2] != "-" {
+			http.Error(res, "Attendance already submitted", http.StatusForbidden)
+			return
+		} else {
 			records[attendanceIndex][2] = time.Now().Format("2006-01-02 15:04:05")
 		}
 
