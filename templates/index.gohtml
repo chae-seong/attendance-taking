@@ -11,6 +11,9 @@
 {{if .StudentID}}
     Welcome {{.Name}}<br>
 <h2><a href="/restricted">Restricted Area</a></h2>
+<form action="/submitattendance" method="post">
+    <input type="submit" value="Submit Attendance">
+</form>
 <h2><a href="/logout">Logout</a></h2>
 {{else}}
 <h2>Log in to continue.</h2>
