@@ -22,6 +22,9 @@
         </tr>
         {{end}}
     </table>
+    <form action="/exportAttendance" method="post">
+        <button type="submit">Export Attendance</button>
+    </form>
     <h2><a href="/logout">Log Out</a></h2>
 {{else}}
     <p>No student data available.</p>

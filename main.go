@@ -41,7 +41,8 @@ func main() {
 	http.HandleFunc("/attendance", attendance)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
-	http.HandleFunc("/submitattendance", submitattendance)
+	http.HandleFunc("/submitAttendance", submitAttendance)
+	http.HandleFunc("/exportAttendance", exportAttendance)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.ListenAndServe(":5332", nil)
 }
@@ -96,8 +97,6 @@ func attendance(res http.ResponseWriter, req *http.Request) {
 		}
 		students = append(students, student)
 	}
-
-	fmt.Println(students)
 
 	tpl.ExecuteTemplate(res, "attendance.gohtml", students)
 }
@@ -212,9 +211,45 @@ func loadStudentsFromCSV(filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, record := range records {
-		mapUsers[record[0]] = user{record[0], record[1], hashPassword("changeYourPassword")}
+	if len(records[0]) >= 3 {
+		log.Fatal("CSV file already has attendance column")
 	}
+	records[0] = append(records[0], "Attendance")
+	for i, record := range records[1:] {
+		mapUsers[record[0]] = user{record[0], record[1], hashPassword("changeYourPassword")}
+		records[i+1] = append(records[i+1], "-")
+		fmt.Println(records)
+	}
+	// Create a new file for writing
+	newFile, err := os.Create("students_attendance.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer newFile.Close()
+
+	// Write the updated CSV to the new file
+	writer := csv.NewWriter(newFile)
+	defer writer.Flush()
+
+	// Write headers
+	headers := records[0]
+	err = writer.Write(headers)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Write rows
+	err = writer.WriteAll(records[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Rename the new file to replace the original file
+	err = os.Rename("students_attendance.csv", "students.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(records)
 }
 
 func hashPassword(password string) []byte {
@@ -225,7 +260,7 @@ func hashPassword(password string) []byte {
 	return hashedPassword
 }
 
-func submitattendance(res http.ResponseWriter, req *http.Request) {
+func submitAttendance(res http.ResponseWriter, req *http.Request) {
 	if !alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
@@ -233,6 +268,7 @@ func submitattendance(res http.ResponseWriter, req *http.Request) {
 	myUser := getUser(res, req)
 	if req.Method == http.MethodPost {
 		// Open csv for appending timestamp
+
 		file, err := os.Open("students.csv")
 		if err != nil {
 			log.Fatal(err)
@@ -246,21 +282,21 @@ func submitattendance(res http.ResponseWriter, req *http.Request) {
 		}
 
 		// Find the index of the current student
-		var attendanceIndex int
+		var studentIndex int
 		for i, row := range records {
 			if row[0] == myUser.StudentID {
-				attendanceIndex = i
+				studentIndex = i
 				break
 			}
 		}
 
 		// Update the "Attendance" column with the current timestamp
-		if records[attendanceIndex][2] != "-" {
+		if records[studentIndex][2] != "-" {
+			fmt.Println("Attendance already submitted")
 			http.Error(res, "Attendance already submitted", http.StatusForbidden)
 			return
-		} else {
-			records[attendanceIndex][2] = time.Now().Format("2006-01-02 15:04:05")
 		}
+		records[studentIndex][2] = time.Now().Format("2006-01-02 15:04:05")
 
 		// Create a new file for writing
 		newFile, err := os.Create("students_attendance.csv")
@@ -295,4 +331,21 @@ func submitattendance(res http.ResponseWriter, req *http.Request) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
+}
+
+func exportAttendance(res http.ResponseWriter, req *http.Request) {
+	// Open the existing students.csv file
+	file, err := os.Open("./students.csv")
+	if err != nil {
+		log.Println("Error opening students.csv:", err)
+		http.Error(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	// Set the Content-Disposition header to specify the filename
+	res.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=students_%s.csv", time.Now().Format("2006-01-02")))
+
+	// Serve the file for download
+	http.ServeContent(res, req, "", time.Now(), file)
 }
