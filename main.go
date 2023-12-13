@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
+	"os"
 
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -11,9 +14,8 @@ import (
 
 type user struct {
 	StudentID string
+	Name      string
 	Password  []byte
-	First     string
-	Last      string
 }
 
 var tpl *template.Template
@@ -23,8 +25,9 @@ var mapSessions = map[string]string{}
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
 	// admin username & password
-	bPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.MinCost) // don't do this irl
-	mapUsers["admin"] = user{"admin", bPassword, "admin", "admin"}                  // don't do this irl
+	// bPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.MinCost) // don't do this irl
+	mapUsers["admin"] = user{"admin", "admin", hashPassword("password")} // don't do this irl
+	loadStudentsFromCSV("students.csv")
 }
 
 func main() {
@@ -137,4 +140,29 @@ func alreadyLoggedIn(req *http.Request) bool {
 	username := mapSessions[myCookie.Value]
 	_, ok := mapUsers[username]
 	return ok
+}
+
+func loadStudentsFromCSV(filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, record := range records {
+		mapUsers[record[0]] = user{record[0], record[1], hashPassword("changeYourPassword")}
+	}
+}
+
+func hashPassword(password string) []byte {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return hashedPassword
 }
