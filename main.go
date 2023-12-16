@@ -76,6 +76,19 @@ func attendance(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Check if "students.csv" exists
+	_, err := os.Stat("students.csv")
+	if os.IsNotExist(err) {
+		// "students.csv" does not exist, prompt admin to upload the file
+		http.Error(res, "Please upload the student list first", http.StatusInternalServerError)
+		return
+	} else if err != nil {
+		// Handle other errors if necessary
+		log.Fatal(err)
+		http.Error(res, "An error occurred while checking for the student list", http.StatusInternalServerError)
+		return
+	}
+
 	file, err := os.Open("students.csv")
 	if err != nil {
 		log.Fatal(err)
