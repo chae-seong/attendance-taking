@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -32,7 +33,6 @@ var mapSessions = map[string]string{}
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
 	mapUsers["admin"] = user{"admin", "admin", hashPassword("password")} // don't do this irl
-	loadStudentsFromCSV("students.csv")
 }
 
 func main() {
@@ -41,6 +41,7 @@ func main() {
 	http.HandleFunc("/attendance", attendance)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
+	http.HandleFunc("/upload", upload)
 	http.HandleFunc("/submitAttendance", submitAttendance)
 	http.HandleFunc("/exportAttendance", exportAttendance)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
@@ -197,6 +198,50 @@ func alreadyLoggedIn(req *http.Request) bool {
 	username := mapSessions[myCookie.Value]
 	_, ok := mapUsers[username]
 	return ok
+}
+
+func upload(res http.ResponseWriter, req *http.Request) {
+	if !alreadyLoggedIn(req) {
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
+	}
+	myUser := getUser(res, req)
+	if myUser.StudentID != "admin" {
+		http.Redirect(res, req, "/", http.StatusSeeOther)
+		return
+	}
+	if req.Method == http.MethodPost {
+		// open uploaded file
+		file, _, err := req.FormFile("csvFile")
+		if err != nil {
+			log.Println("Error uploading file:", err)
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		// save the uploaded file as "students.csv"
+		savePath := "./students.csv"
+		newFile, err := os.Create(savePath)
+		if err != nil {
+			log.Println("Error creating file:", err)
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer newFile.Close()
+
+		_, err = io.Copy(newFile, file)
+		if err != nil {
+			log.Println("Error copying file:", err)
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		loadStudentsFromCSV("students.csv")
+
+		http.Redirect(res, req, "/admin", http.StatusSeeOther)
+		return
+	}
 }
 
 func loadStudentsFromCSV(filename string) {
