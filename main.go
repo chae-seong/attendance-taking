@@ -276,7 +276,6 @@ func loadStudentsFromCSV(filename string) {
 	for i, record := range records[1:] {
 		mapUsers[record[0]] = user{record[0], record[1], hashPassword("changeYourPassword")}
 		records[i+1] = append(records[i+1], "-")
-		fmt.Println(records)
 	}
 	// Create a new file for writing
 	newFile, err := os.Create("students_attendance.csv")
@@ -307,7 +306,6 @@ func loadStudentsFromCSV(filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(records)
 }
 
 func hashPassword(password string) []byte {
@@ -350,7 +348,6 @@ func submitAttendance(res http.ResponseWriter, req *http.Request) {
 
 		// Update the "Attendance" column with the current timestamp
 		if records[studentIndex][2] != "-" {
-			fmt.Println("Attendance already submitted")
 			http.Error(res, "Attendance already submitted", http.StatusForbidden)
 			return
 		}
