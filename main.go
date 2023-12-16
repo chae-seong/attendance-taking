@@ -1,3 +1,5 @@
+// Package main is the main package of the attendance-taking program.
+// It provides functionality for managing student attendance through a web interface.
 package main
 
 import (
@@ -15,12 +17,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// user is a struct to store user information
 type user struct {
 	StudentID string
 	Name      string
 	Password  []byte
 }
 
+// Student is a struct to store student information
 type Student struct {
 	StudentID  string
 	Name       string
@@ -222,6 +226,7 @@ func getUser(res http.ResponseWriter, req *http.Request) user {
 	return myUser
 }
 
+// alreadyLoggedIn checks if the user is already logged in
 func alreadyLoggedIn(req *http.Request) bool {
 	myCookie, err := req.Cookie("myCookie")
 	if err != nil {
@@ -232,6 +237,8 @@ func alreadyLoggedIn(req *http.Request) bool {
 	return ok
 }
 
+// upload is the handler for the upload page
+// It handles the uploading of the student list by the admin user
 func upload(res http.ResponseWriter, req *http.Request) {
 	if !alreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -276,6 +283,8 @@ func upload(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// loadStudentsFromCSV loads the student list from the CSV file
+// It also adds the "Attendance" column to the CSV file if it doesn't already exist
 func loadStudentsFromCSV(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -328,6 +337,9 @@ func loadStudentsFromCSV(filename string) {
 	}
 }
 
+// hashPassword hashes the password using bcrypt
+// It returns the hashed password as a byte slice
+// It is used to hash the password before storing it in the mapUsers
 func hashPassword(password string) []byte {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -412,6 +424,8 @@ func submitAttendance(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// exportAttendance is the handler for the exportAttendance page
+// It allows the admin to download the attendance list
 func exportAttendance(res http.ResponseWriter, req *http.Request) {
 	// Open the existing students.csv file
 	file, err := os.Open("./students.csv")
