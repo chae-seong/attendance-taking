@@ -129,6 +129,23 @@ func login(res http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodPost {
 		username := req.FormValue("username")
 		password := req.FormValue("password")
+
+		if username != "admin" {
+			// Check if "students.csv" exists
+			_, err := os.Stat("students.csv")
+			if os.IsNotExist(err) {
+				// "students.csv" does not exist, prompt admin to upload the file
+				http.Error(res, "Please get admin to upload student list first", http.StatusInternalServerError)
+				return
+			} else if err != nil {
+				// Handle other errors if necessary
+				log.Fatal(err)
+				http.Error(res, "An error occurred while checking for the student list", http.StatusInternalServerError)
+				return
+			}
+
+			loadStudentsFromCSV("students.csv")
+		}
 		// check if user exist with username
 		myUser, ok := mapUsers[username]
 		if !ok {
@@ -269,13 +286,14 @@ func loadStudentsFromCSV(filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(records[0]) >= 3 {
-		log.Fatal("CSV file already has attendance column")
+	if len(records[0]) < 3 {
+		records[0] = append(records[0], "Attendance")
+		for i, _ := range records[1:] {
+			records[i+1] = append(records[i+1], "-")
+		}
 	}
-	records[0] = append(records[0], "Attendance")
-	for i, record := range records[1:] {
+	for _, record := range records[1:] {
 		mapUsers[record[0]] = user{record[0], record[1], hashPassword("changeYourPassword")}
-		records[i+1] = append(records[i+1], "-")
 	}
 	// Create a new file for writing
 	newFile, err := os.Create("students_attendance.csv")
@@ -322,6 +340,7 @@ func submitAttendance(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	myUser := getUser(res, req)
+
 	if req.Method == http.MethodPost {
 		// Open csv for appending timestamp
 
