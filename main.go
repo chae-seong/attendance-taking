@@ -48,8 +48,8 @@ func main() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/upload", upload)
-	http.HandleFunc("/Submit", Submit)
-	http.HandleFunc("/Export", Export)
+	http.HandleFunc("/submit", Submit)
+	http.HandleFunc("/export", Export)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.ListenAndServe(":5332", nil)
 }
