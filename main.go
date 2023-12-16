@@ -271,7 +271,7 @@ func upload(res http.ResponseWriter, req *http.Request) {
 
 		loadStudentsFromCSV("students.csv")
 
-		http.Redirect(res, req, "/admin", http.StatusSeeOther)
+		http.Redirect(res, req, "/attendance", http.StatusSeeOther)
 		return
 	}
 }
@@ -295,7 +295,7 @@ func loadStudentsFromCSV(filename string) {
 		}
 	}
 	for _, record := range records[1:] {
-		mapUsers[record[0]] = user{record[0], record[1], hashPassword("changeYourPassword")}
+		mapUsers[record[0]] = user{record[0], record[1], hashPassword("password")}
 	}
 	// Create a new file for writing
 	newFile, err := os.Create("students_attendance.csv")
