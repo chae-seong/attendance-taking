@@ -32,7 +32,11 @@ type Student struct {
 }
 
 var tpl *template.Template
+
+// MapUsers is a map that stores User objects with their corresponding keys.
 var MapUsers = map[string]User{}
+
+// MapSessions is a map that stores session IDs with their corresponding usernames.
 var MapSessions = map[string]string{}
 var mutex sync.Mutex
 
@@ -51,12 +55,32 @@ func init() {
 	MapUsers["admin"] = User{adminUsername, "admin", HashPassword(adminPassword)}
 }
 
+// Index is an HTTP handler that serves the index page.
+//
+// It retrieves the user information using the getUser function, executes the "index.gohtml" template, and writes the result to the http.ResponseWriter.
+// Any errors that occur during template execution are printed to the standard output.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer to write the
+//     generated HTML content.
+//   - req: *http.Request - the incoming HTTP request.
 func Index(res http.ResponseWriter, req *http.Request) {
 	myUser := getUser(res, req)
 	err := tpl.ExecuteTemplate(res, "index.gohtml", myUser)
 	fmt.Println(err)
 }
 
+// Admin is an HTTP handler that serves the admin page.
+//
+// It retrieves the user information using the getUser function.
+// If the user is not an admin, it redirects them to the index page.
+// Otherwise, it executes the "admin.gohtml" template and writes the result to the http.ResponseWriter.
+// Any errors that occur during template execution are printed to the standard output.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer to write the
+//     generated HTML content.
+//   - req: *http.Request - the incoming HTTP request.
 func Admin(res http.ResponseWriter, req *http.Request) {
 	myUser := getUser(res, req)
 	if myUser.StudentID != "admin" {
@@ -67,6 +91,18 @@ func Admin(res http.ResponseWriter, req *http.Request) {
 	fmt.Println(err)
 }
 
+// Attendance is an HTTP handler that serves the attendance page.
+//
+// It retrieves the user information using the getUser function.
+// If the user is not logged in, it redirects them to the index page.
+// If the user is not an admin, it redirects them to the index page.
+// Checks if the "students.csv" file exists, and if not, prompts the admin to upload the student list.
+// Reads the CSV file, converts the data to a slice of Student structs, and executes the "attendance.gohtml" template, writing the result to the http.ResponseWriter.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer to write the
+//     generated HTML content.
+//   - req: *http.Request - the incoming HTTP request.
 func Attendance(res http.ResponseWriter, req *http.Request) {
 	myUser := getUser(res, req)
 	if !AlreadyLoggedIn(req) {
@@ -118,6 +154,17 @@ func Attendance(res http.ResponseWriter, req *http.Request) {
 	tpl.ExecuteTemplate(res, "attendance.gohtml", students)
 }
 
+// Login is an HTTP handler that serves the login page and processes
+// the login form submission.
+//
+// If the user is already logged in, it redirects them to the index or admin page based on their role.
+// If the user is not logged in, it processes the form submission, checks the user credentials, creates a session, and redirects to the index or admin page based on the user's role.
+// If the username is "admin", it checks for the existence of "students.csv" and loads it into the MapUsers variable using the LoadStudentsFromCSV function.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer to write the
+//     generated HTML content.
+//   - req: *http.Request - the incoming HTTP request.
 func Login(res http.ResponseWriter, req *http.Request) {
 	if AlreadyLoggedIn(req) {
 		if getUser(res, req).StudentID == "admin" {
@@ -182,6 +229,16 @@ func Login(res http.ResponseWriter, req *http.Request) {
 	tpl.ExecuteTemplate(res, "login.gohtml", nil)
 }
 
+// Logout is an HTTP handler that logs out the currently logged-in user.
+//
+// If the user is not logged in, it redirects them to the index page.
+// Deletes the session and removes the cookie associated with it.
+// Redirects the user to the index page after successful logout.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer to write the
+//     generated HTML content.
+//   - req: *http.Request - the incoming HTTP request.
 func Logout(res http.ResponseWriter, req *http.Request) {
 	if !AlreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -223,8 +280,14 @@ func getUser(res http.ResponseWriter, req *http.Request) User {
 	return myUser
 }
 
-// AlreadyLoggedIn checks if the User is already logged in
-// It returns true if the User is already logged in, and false otherwise
+// AlreadyLoggedIn checks if a user is already logged in by examining the
+// presence of a session cookie.
+//
+// Parameters:
+//   - req: *http.Request - the incoming HTTP request.
+//
+// Returns:
+//   - bool - true if the user is already logged in, false otherwise.
 func AlreadyLoggedIn(req *http.Request) bool {
 	myCookie, err := req.Cookie("myCookie")
 	if err != nil {
@@ -235,6 +298,18 @@ func AlreadyLoggedIn(req *http.Request) bool {
 	return ok
 }
 
+// Upload is an HTTP handler that handles file uploads for updating
+// the student list (CSV file).
+//
+// If the user is not logged in, it redirects them to the index page.
+// If the user is not an admin, it redirects them to the index page.
+// Processes the uploaded CSV file, saves it as "students.csv", and loads the updated student list into the MapUsers variable.
+// Redirects to the attendance page after successful upload.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer to write the
+//     generated HTML content.
+//   - req: *http.Request - the incoming HTTP request.
 func Upload(res http.ResponseWriter, req *http.Request) {
 	if !AlreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -279,8 +354,11 @@ func Upload(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// LoadStudentsFromCSV loads the student list from the CSV file
-// It also adds the "Attendance" column to the CSV file if it doesn't already exist
+// LoadStudentsFromCSV reads the student data from a CSV file and loads it into the MapUsers variable.
+// It also ensures that each student record has an "Attendance" column and updates the student list CSV file accordingly.
+//
+// Parameters:
+//   - filename: string - the name of the CSV file to load and update.
 func LoadStudentsFromCSV(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -335,9 +413,13 @@ func LoadStudentsFromCSV(filename string) {
 	}
 }
 
-// HashPassword hashes the password using bcrypt
-// It returns the hashed password as a byte slice
-// It is used to hash the password before storing it in the MapUsers
+// HashPassword generates a bcrypt hash for the given password.
+//
+// Parameters:
+//   - password: string - the password to hash.
+//
+// Returns:
+//   - []byte - the bcrypt hashed password.
 func HashPassword(password string) []byte {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -346,8 +428,11 @@ func HashPassword(password string) []byte {
 	return hashedPassword
 }
 
-// Submit is the handler for the Submit page
-// It allows students to submit their attendance by adding timestamp the "Attendance" column in the CSV file
+// Submit handles the submission of attendance for the currently logged-in student.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer.
+//   - req: *http.Request - the HTTP request.
 func Submit(res http.ResponseWriter, req *http.Request) {
 	if !AlreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -424,8 +509,11 @@ func Submit(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// Export is the handler for the Export page
-// It allows the admin to download the attendance list
+// Export serves the students.csv file for download with a specified filename based on the current date.
+//
+// Parameters:
+//   - res: http.ResponseWriter - the response writer.
+//   - req: *http.Request - the HTTP request.
 func Export(res http.ResponseWriter, req *http.Request) {
 	// Open the existing students.csv file
 	file, err := os.Open("./students.csv")
