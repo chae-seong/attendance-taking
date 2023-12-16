@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -29,6 +30,7 @@ type Student struct {
 var tpl *template.Template
 var mapUsers = map[string]user{}
 var mapSessions = map[string]string{}
+var mutex sync.Mutex
 
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
@@ -340,6 +342,9 @@ func submitAttendance(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	myUser := getUser(res, req)
+
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	if req.Method == http.MethodPost {
 		// Open csv for appending timestamp
