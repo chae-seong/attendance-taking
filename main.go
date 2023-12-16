@@ -299,7 +299,7 @@ func loadStudentsFromCSV(filename string) {
 	}
 	if len(records[0]) < 3 {
 		records[0] = append(records[0], "Attendance")
-		for i, _ := range records[1:] {
+		for i := range records[1:] {
 			records[i+1] = append(records[i+1], "-")
 		}
 	}
