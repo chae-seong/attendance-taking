@@ -38,7 +38,7 @@ var mutex sync.Mutex
 
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
-	mapUsers["admin"] = user{"admin", "admin", hashPassword("password")} // don't do this irl
+	mapUsers["admin"] = user{"admin", "admin", HashPassword("password")} // don't do this irl
 }
 
 func main() {
@@ -48,8 +48,8 @@ func main() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/upload", upload)
-	http.HandleFunc("/submitAttendance", submitAttendance)
-	http.HandleFunc("/exportAttendance", exportAttendance)
+	http.HandleFunc("/Submit", Submit)
+	http.HandleFunc("/Export", Export)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.ListenAndServe(":5332", nil)
 }
@@ -72,7 +72,7 @@ func admin(res http.ResponseWriter, req *http.Request) {
 
 func attendance(res http.ResponseWriter, req *http.Request) {
 	myUser := getUser(res, req)
-	if !alreadyLoggedIn(req) {
+	if !AlreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
@@ -122,7 +122,7 @@ func attendance(res http.ResponseWriter, req *http.Request) {
 }
 
 func login(res http.ResponseWriter, req *http.Request) {
-	if alreadyLoggedIn(req) {
+	if AlreadyLoggedIn(req) {
 		if getUser(res, req).StudentID == "admin" {
 			http.Redirect(res, req, "/admin", http.StatusSeeOther)
 		} else {
@@ -150,7 +150,7 @@ func login(res http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			loadStudentsFromCSV("students.csv")
+			LoadStudentsFromCSV("students.csv")
 		}
 		// check if user exist with username
 		myUser, ok := mapUsers[username]
@@ -186,7 +186,7 @@ func login(res http.ResponseWriter, req *http.Request) {
 }
 
 func logout(res http.ResponseWriter, req *http.Request) {
-	if !alreadyLoggedIn(req) {
+	if !AlreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
@@ -226,8 +226,9 @@ func getUser(res http.ResponseWriter, req *http.Request) user {
 	return myUser
 }
 
-// alreadyLoggedIn checks if the user is already logged in
-func alreadyLoggedIn(req *http.Request) bool {
+// AlreadyLoggedIn checks if the user is already logged in
+// It returns true if the user is already logged in, and false otherwise
+func AlreadyLoggedIn(req *http.Request) bool {
 	myCookie, err := req.Cookie("myCookie")
 	if err != nil {
 		return false
@@ -237,10 +238,8 @@ func alreadyLoggedIn(req *http.Request) bool {
 	return ok
 }
 
-// upload is the handler for the upload page
-// It handles the uploading of the student list by the admin user
 func upload(res http.ResponseWriter, req *http.Request) {
-	if !alreadyLoggedIn(req) {
+	if !AlreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
@@ -276,16 +275,16 @@ func upload(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		loadStudentsFromCSV("students.csv")
+		LoadStudentsFromCSV("students.csv")
 
 		http.Redirect(res, req, "/attendance", http.StatusSeeOther)
 		return
 	}
 }
 
-// loadStudentsFromCSV loads the student list from the CSV file
+// LoadStudentsFromCSV loads the student list from the CSV file
 // It also adds the "Attendance" column to the CSV file if it doesn't already exist
-func loadStudentsFromCSV(filename string) {
+func LoadStudentsFromCSV(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -304,7 +303,7 @@ func loadStudentsFromCSV(filename string) {
 		}
 	}
 	for _, record := range records[1:] {
-		mapUsers[record[0]] = user{record[0], record[1], hashPassword("password")}
+		mapUsers[record[0]] = user{record[0], record[1], HashPassword("password")}
 	}
 	// Create a new file for writing
 	newFile, err := os.Create("students_attendance.csv")
@@ -337,10 +336,10 @@ func loadStudentsFromCSV(filename string) {
 	}
 }
 
-// hashPassword hashes the password using bcrypt
+// HashPassword hashes the password using bcrypt
 // It returns the hashed password as a byte slice
 // It is used to hash the password before storing it in the mapUsers
-func hashPassword(password string) []byte {
+func HashPassword(password string) []byte {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatal(err)
@@ -348,8 +347,10 @@ func hashPassword(password string) []byte {
 	return hashedPassword
 }
 
-func submitAttendance(res http.ResponseWriter, req *http.Request) {
-	if !alreadyLoggedIn(req) {
+// Submit is the handler for the Submit page
+// It allows students to submit their attendance by adding timestamp the "Attendance" column in the CSV file
+func Submit(res http.ResponseWriter, req *http.Request) {
+	if !AlreadyLoggedIn(req) {
 		http.Redirect(res, req, "/", http.StatusSeeOther)
 		return
 	}
@@ -424,9 +425,9 @@ func submitAttendance(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// exportAttendance is the handler for the exportAttendance page
+// Export is the handler for the Export page
 // It allows the admin to download the attendance list
-func exportAttendance(res http.ResponseWriter, req *http.Request) {
+func Export(res http.ResponseWriter, req *http.Request) {
 	// Open the existing students.csv file
 	file, err := os.Open("./students.csv")
 	if err != nil {
