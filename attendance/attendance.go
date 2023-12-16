@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/joho/godotenv"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -37,7 +38,17 @@ var mutex sync.Mutex
 
 func init() {
 	tpl = template.Must(template.ParseGlob("./attendance/templates/*gohtml"))
-	MapUsers["admin"] = User{"admin", "admin", HashPassword("password")} // don't do this irl
+
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Error loading .env file")
+		return
+	}
+	// Read environment variables
+	adminUsername := os.Getenv("ADMIN_USERNAME")
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+
+	MapUsers["admin"] = User{adminUsername, "admin", HashPassword(adminPassword)}
 }
 
 func Index(res http.ResponseWriter, req *http.Request) {
@@ -288,8 +299,10 @@ func LoadStudentsFromCSV(filename string) {
 			records[i+1] = append(records[i+1], "-")
 		}
 	}
+	defaultPassword := os.Getenv("DEFAULT_PASSWORD")
+
 	for _, record := range records[1:] {
-		MapUsers[record[0]] = User{record[0], record[1], HashPassword("password")}
+		MapUsers[record[0]] = User{record[0], record[1], HashPassword(defaultPassword)}
 	}
 	// Create a new file for writing
 	newFile, err := os.Create("students_attendance.csv")
