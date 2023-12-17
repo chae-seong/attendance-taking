@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -347,11 +348,57 @@ func Upload(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		// Check if the headers in the uploaded CSV file are correct
+		if err := checkCSVHeaders(savePath, []string{"Student ID", "Name"}); err != nil {
+			os.Remove("./students.csv")
+			log.Println("Incorrect CSV header:", err)
+			http.Error(res, "Incorrect CSV header. Make sure it matches Student ID and Name", http.StatusBadRequest)
+			return
+		}
+
 		LoadStudentsFromCSV("students.csv")
 
 		http.Redirect(res, req, "/attendance", http.StatusSeeOther)
 		return
 	}
+}
+
+// checkCSVHeaders checks if the headers in the CSV file match the expected headers.
+func checkCSVHeaders(filePath string, expectedHeaders []string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	actualHeaders, err := reader.Read()
+	if err != nil {
+		return err
+	}
+
+	// Check if the headers match the expected format
+	if !areHeadersCorrect(actualHeaders, expectedHeaders) {
+		return fmt.Errorf("incorrect CSV header format")
+	}
+
+	return nil
+}
+
+func areHeadersCorrect(actualHeaders, expectedHeaders []string) bool {
+	// Check if the length of actual and expected headers is the same
+	if len(actualHeaders) != len(expectedHeaders) {
+		return false
+	}
+
+	// Check if each header matches the expected header
+	for i, header := range actualHeaders {
+		if strings.TrimSpace(header) != expectedHeaders[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // LoadStudentsFromCSV reads the student data from a CSV file and loads it into the MapUsers variable.
