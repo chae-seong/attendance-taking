@@ -14,6 +14,14 @@ Admin is able to view the students’ attendance and then proceed to export the 
 4. `go run main.go` to run the application
 5. Go to <http://127.0.0.1:5332> in your browser
 
+## Sample students.csv:
+
+```
+Student ID,Name
+S01,John Doe
+S02,Jane Smith
+```
+
 ## Documentation:
 
 1. `godoc -http=:8080`
