@@ -1,6 +1,10 @@
 # Attendance Taking
 
-A simple web application for students to submit their attendance and for admin to upload and export student list.
+A web application for students to submit their attendance and for admin to upload and export student list.
+
+Admin has to first upload the students.csv file that contains Student ID and Name of students. The students from the students.csv can then login using their Student ID and default password before submitting their attendance.
+
+Admin is able to view the students’ attendance and then proceed to export the students.csv file with the updated attendance. Once the admin exports the file, students are unable to login and hence unable to submit their attendance.
 
 ## To run the application:
 
