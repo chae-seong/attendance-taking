@@ -529,4 +529,10 @@ func Export(res http.ResponseWriter, req *http.Request) {
 
 	// Serve the file for download
 	http.ServeContent(res, req, "", time.Now(), file)
+
+	defer func() {
+		if err := os.Remove("./students.csv"); err != nil {
+			log.Println("Error deleting students.csv:", err)
+		}
+	}()
 }
