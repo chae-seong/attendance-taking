@@ -6,10 +6,9 @@ A simple web application for students to submit their attendance and for admin t
 
 1. Clone the repo using `git clone <git repo link>`
 2. Copy the `.env.example` file using `cp .env.example .env`
-3. Open the `.env` file using `vim .env` and replace the placeholder values with your configuration
-4. Save the `.env` file using `:wq`
-5. `go run main.go` to run the application
-6. Go to <http://127.0.0.1:5332> in your browser
+3. Replace the placeholder values in `.env` file with your own values
+4. `go run main.go` to run the application
+5. Go to <http://127.0.0.1:5332> in your browser
 
 ## Documentation:
 
